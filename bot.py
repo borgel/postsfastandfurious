@@ -12,6 +12,8 @@ https://github.com/byroot/pysrt
 """
 import os
 import random
+import datetime
+import time
 
 #python reddit API
 import praw
@@ -26,10 +28,24 @@ from Secret import bot_name, bot_pass, bot_useragent
 SUBTITLES_DIR  =  'Subtitles/'
 SRT_EXT        =  '.srt'
 
+#the list of strings which match something we might want to reply with
+FAST_STRINGS   =  [
+   'fast',
+   'furious'
+]
+
 
 #a function to get a random subtitle line from an open srt
 def GetRandomSubLine(srt):
    return srt[random.randint(0, len(srt) - 1)].text
+
+def FormattedRandomComment(srt):
+   s = GetRandomSubLine(srt)
+
+   out = '"' + str(s) + '" - *The Fast and the Furious*'
+
+   return out
+
 
 
 #the object which holds the open subtitles
@@ -56,7 +72,45 @@ print 'reddit login res = ' + str(res)
 #the flag to keep us running or die
 Run = True
 
+#track all comments we have replied to
+RepliedTo = []
+
 while Run:
-   #search for relevant posts on reddit
-   print GetRandomSubLine(subs)
+   print 'Starting cycle - ' + str(datetime.datetime.now())
+
+   #get all recent comments on all of reddit
+   allCom = rdt.get_all_comments()
+
+   #TODO add rate limiting for upvotes and replies!
+
+   #check if the comment has any of our keywords/phrases
+   found = []
+   total = 0
+   for c in allCom:
+      total += 1
+      for key in FAST_STRINGS:
+         #print c.body
+
+         if c.body.count(key) > 0:
+            print '\nFound one!!\n[' + c.body + ']\n'
+
+            if c.id in RepliedTo:
+               print 'replied to this, skipping it'
+               continue
+
+            c.upvote()
+            toComment = FormattedRandomComment(subs)
+
+            print toComment
+            c.reply(toComment)
+
+
+            RepliedTo.append(c.id)
+
+   print 'Checked ' + str(total) + ' comments'
+
+   time.sleep(20)
+
+
+   #Run = False
 
